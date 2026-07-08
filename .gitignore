@@ -1,0 +1,33 @@
+# Local editor and Cursor metadata
+/.cursor/
+.cursorrules
+.cursorignore
+.vscode/
+.vs/
+.idea/
+
+# Local docs and scratch files
+notes/
+scratch/
+
+# Godot/editor generated files
+.godot/
+.gotod/
+*.uid
+*.import
+
+# .NET build outputs
+bin/
+obj/
+build/
+publish/
+screenshots/
+
+# Packaging/staging outputs
+*.zip
+
+# Local machine/user files
+*.user
+*.suo
+*.log
+.env

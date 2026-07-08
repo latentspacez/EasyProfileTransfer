@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.11</Version>
+    <CompiledAgainstSts2Versions>v0.107.1</CompiledAgainstSts2Versions>
+    <ModManifestMinGameVersion>v0.107.1</ModManifestMinGameVersion>
+    <BuildArtifactVersion>v$(Version)</BuildArtifactVersion>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GameVersionsRoot Condition="'$(GameVersionsRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\GameVersions'))</GameVersionsRoot>
+  </PropertyGroup>
+
+  <Import Project="Directory.Build.props.user" Condition="Exists('Directory.Build.props.user')" />
+</Project>

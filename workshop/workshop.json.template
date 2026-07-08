@@ -1,0 +1,12 @@
+{
+  "title": "EasyProfileTransfer",
+  "description": "[h2]About[/h2]\nCopy vanilla profile saves into the modded save tree from the main menu.\n\nEasyProfileTransfer adds a **Transfer Profile** button on the main menu so you can preview vanilla vs modded profile stats before overwriting modded saves with your vanilla copies.\n\nNo other mods are required.\n\nAuthor: latentspacez\nMod version: {{MOD_VERSION}}\nCompiled against: StS2 {{STS2_VERSION}}",
+  "visibility": "private",
+  "changeNote": "Update for {{MOD_VERSION}}.",
+  "tags": [
+    "quality of life",
+    "saves",
+    "ui"
+  ],
+  "dependencies": {{WORKSHOP_DEPENDENCIES}}
+}

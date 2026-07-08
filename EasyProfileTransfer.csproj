@@ -1,0 +1,124 @@
+<Project Sdk="Godot.NET.Sdk/4.5.1">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>true</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>latentspacez.Sts2.EasyProfileTransfer</PackageId>
+    <Title>EasyProfileTransfer</Title>
+    <Description>Copy vanilla profile saves into the modded save tree from the main menu.</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <ModInstallDirName>EasyProfileTransfer</ModInstallDirName>
+    <RequiresDataModelWorkshopDependency>false</RequiresDataModelWorkshopDependency>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsWindows>false</IsWindows>
+    <IsLinux>false</IsLinux>
+    <IsOSX>false</IsOSX>
+    <IsWindows Condition="$([MSBuild]::IsOSPlatform('Windows'))">true</IsWindows>
+    <IsLinux Condition="$([MSBuild]::IsOSPlatform('Linux'))">true</IsLinux>
+    <IsOSX Condition="$([MSBuild]::IsOSPlatform('OSX'))">true</IsOSX>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsWindows)' == 'true'">
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 2868840', 'InstallLocation', '', RegistryView.Registry64, RegistryView.Registry32))</Sts2Path>
+    <AutoSteamPath>$(registry:HKEY_CURRENT_USER\Software\Valve\Steam@SteamPath)\steamapps</AutoSteamPath>
+    <SteamLibraryPath Condition="'$(SteamLibraryPath)' == '' and Exists('$(AutoSteamPath)/common/Slay the Spire 2')">$(AutoSteamPath)</SteamLibraryPath>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_windows_x86_64</Sts2DataDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(IsLinux)' == 'true'">
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_linuxbsd_x86_64</Sts2DataDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(IsOSX)' == 'true'">
+    <Sts2Path Condition="'$(Sts2Path)' == ''">$(HOME)/Library/Application Support/Steam/steamapps/common/Slay the Spire 2</Sts2Path>
+    <Sts2DataDir Condition="'$(Sts2DataDir)' == ''">$(Sts2Path)/data_sts2_macos_x86_64</Sts2DataDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GameVersionFolder)' == '' and '$(SkipAutoGameVersionFolder)' != 'true' and '$(Sts2Path)' != ''">
+    <_ReleaseInfoPath>$([System.IO.Path]::Combine('$(Sts2Path)', 'release_info.json'))</_ReleaseInfoPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersionFolder)' == '' and '$(SkipAutoGameVersionFolder)' != 'true' and '$(_ReleaseInfoPath)' != '' and Exists('$(_ReleaseInfoPath)')">
+    <_ReleaseJsonForFolder>$([System.IO.File]::ReadAllText('$(_ReleaseInfoPath)'))</_ReleaseJsonForFolder>
+    <_VersionLabelFromInstall>$([System.Text.RegularExpressions.Regex]::Match($(_ReleaseJsonForFolder), '\"version\"\s*:\s*\"([^\"]+)\"').Groups[1].Value)</_VersionLabelFromInstall>
+    <_CandidateVersionFolder Condition="'$(_VersionLabelFromInstall)' != ''">v$([System.String]::Copy($(_VersionLabelFromInstall)).Trim().TrimStart('v').Replace('.', '_'))</_CandidateVersionFolder>
+    <_CandidateSts2FromMirror Condition="'$(_CandidateVersionFolder)' != ''">$([System.IO.Path]::Combine('$(GameVersionsRoot)', '$(_CandidateVersionFolder)', 'sts2.dll'))</_CandidateSts2FromMirror>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(GameVersionFolder)' == '' and '$(SkipAutoGameVersionFolder)' != 'true' and '$(_CandidateVersionFolder)' != '' and Exists('$(_CandidateSts2FromMirror)')">
+    <GameVersionFolder>$(_CandidateVersionFolder)</GameVersionFolder>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(GameVersionFolder)' != ''">
+    <CompiledAgainstSts2Versions>v$([System.String]::Copy($(GameVersionFolder)).Substring(1).Replace('_', '.'))</CompiledAgainstSts2Versions>
+    <GameAssemblyPath>$([System.IO.Path]::Combine('$(GameVersionsRoot)', '$(GameVersionFolder)', 'sts2.dll'))</GameAssemblyPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ArtifactName>$(MSBuildProjectName)_$(BuildArtifactVersion)_StS2_$(CompiledAgainstSts2Versions)</ArtifactName>
+    <OutputPath Condition="'$(GameVersionFolder)' == ''">publish/</OutputPath>
+    <OutputPath Condition="'$(GameVersionFolder)' != ''">publish/$(GameVersionFolder)/</OutputPath>
+    <Sts2AssemblyPath Condition="'$(Sts2AssemblyPath)' == '' and '$(GameAssemblyPath)' != ''">$(GameAssemblyPath)</Sts2AssemblyPath>
+    <Sts2AssemblyPath Condition="'$(Sts2AssemblyPath)' == ''">$(Sts2DataDir)/sts2.dll</Sts2AssemblyPath>
+    <HarmonyAssemblyPath Condition="'$(HarmonyAssemblyPath)' == ''">$(Sts2DataDir)/0Harmony.dll</HarmonyAssemblyPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="MainFile.cs" />
+    <Compile Include="ModVersionInfo.cs" />
+    <Compile Include="Data\**\*.cs" />
+    <Compile Include="UI\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="sts2">
+      <HintPath>$(Sts2AssemblyPath)</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="EasyProfileTransfer.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>CompiledAgainstSts2Versions</_Parameter1>
+      <_Parameter2>$(CompiledAgainstSts2Versions)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <Import Project="..\build\TheSpireChronicles.Manifest.targets" />
+
+  <Target Name="ValidateGameVersionLayout" BeforeTargets="BeforeBuild" Condition="'$(GameVersionFolder)' != ''">
+    <Error Text="sts2.dll not found for GameVersionFolder=$(GameVersionFolder): $(GameAssemblyPath)" Condition="!Exists('$(GameAssemblyPath)')" />
+  </Target>
+
+  <Target Name="CreatePublishZip" AfterTargets="Publish" Condition="'$(SkipPublishShipArtifacts)' != 'true' and '$(IsInnerGodotExport)' != 'true'">
+    <PropertyGroup>
+      <_PublishOutputDir>$([System.IO.Path]::GetDirectoryName('$(TargetPath)'))</_PublishOutputDir>
+      <_SkipNestedGodotPublish>$([System.Text.RegularExpressions.Regex]::IsMatch('$(_PublishOutputDir)', '([\\/]publish[\\/]publish$|[\\/]v\d+_\d+_\d+[\\/]publish$)'))</_SkipNestedGodotPublish>
+      <ReleaseZipPath>$(_PublishOutputDir)\$(MSBuildProjectName)_$(BuildArtifactVersion)_StS2_$(CompiledAgainstSts2Versions).zip</ReleaseZipPath>
+      <ReleaseZipStageDir>$(_PublishOutputDir)_zip_stage\$(MSBuildProjectName)</ReleaseZipStageDir>
+    </PropertyGroup>
+    <RemoveDir Directories="$(ReleaseZipStageDir)" Condition="'$(_SkipNestedGodotPublish)' == 'false' and Exists('$(ReleaseZipStageDir)')" />
+    <MakeDir Directories="$(ReleaseZipStageDir)" Condition="'$(_SkipNestedGodotPublish)' == 'false'" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(ReleaseZipStageDir)\EasyProfileTransfer.dll" Condition="'$(_SkipNestedGodotPublish)' == 'false'" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\EasyProfileTransfer.json" DestinationFolder="$(ReleaseZipStageDir)" Condition="'$(_SkipNestedGodotPublish)' == 'false'" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\README.md" DestinationFolder="$(ReleaseZipStageDir)" Condition="'$(_SkipNestedGodotPublish)' == 'false' and Exists('$(MSBuildProjectDirectory)\README.md')" />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$zip='$(ReleaseZipPath)'; if (Test-Path $zip) { Remove-Item $zip -Force }; Compress-Archive -Path '$(ReleaseZipStageDir)\*' -DestinationPath $zip -Force&quot;" Condition="'$(_SkipNestedGodotPublish)' == 'false'" />
+    <RemoveDir Directories="$(ReleaseZipStageDir)" Condition="'$(_SkipNestedGodotPublish)' == 'false' and Exists('$(ReleaseZipStageDir)')" />
+    <Message Text="Created release zip: $(ReleaseZipPath)" Importance="high" Condition="'$(_SkipNestedGodotPublish)' == 'false' and Exists('$(ReleaseZipPath)')" />
+  </Target>
+
+  <PropertyGroup>
+    <WorkshopPreviewImagePath>$(MSBuildProjectDirectory)\screenshots\workshop_preview.png</WorkshopPreviewImagePath>
+  </PropertyGroup>
+
+  <Import Project="..\build\TheSpireChronicles.Workshop.targets" />
+</Project>
