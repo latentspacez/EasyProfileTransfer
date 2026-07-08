@@ -155,21 +155,15 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
         _modal = new PanelContainer();
         _modal.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
         _modal.Position = new Vector2(ModalMarginLeft, ModalMarginTop);
-        _modal.CustomMinimumSize = new Vector2(680, 0);
+        _modal.CustomMinimumSize = new Vector2(640, 0);
         _modal.AddThemeStyleboxOverride("panel", CreateOpaquePanelStyle(new Color(0.075f, 0.065f, 0.055f, 1f)));
-
-        var modalShell = new Control
-        {
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        _modal.AddChild(modalShell);
 
         var modalRoot = new MarginContainer();
         modalRoot.AddThemeConstantOverride("margin_left", 20);
         modalRoot.AddThemeConstantOverride("margin_right", 20);
         modalRoot.AddThemeConstantOverride("margin_top", 18);
         modalRoot.AddThemeConstantOverride("margin_bottom", 18);
-        modalShell.AddChild(modalRoot);
+        _modal.AddChild(modalRoot);
 
         var content = new VBoxContainer();
         content.AddThemeConstantOverride("separation", 12);
@@ -305,11 +299,10 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
 
         _confirmLayer.AddChild(confirmDimmer);
         _confirmLayer.AddChild(confirmCenter);
-        modalShell.AddChild(_confirmLayer);
-        Callable.From(AlignConfirmLayerToModalShell).CallDeferred();
 
         _modalLayer.AddChild(_dimmer);
         _modalLayer.AddChild(_modal);
+        _modalLayer.AddChild(_confirmLayer);
 
         AddChild(_menuButtonDock);
         AddChild(_modalLayer);
@@ -428,11 +421,13 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
     private void OpenModal()
     {
         RefreshComparisonTable();
+        ResizeModalToContent();
         _statusLabel.Text = "";
         _confirmLayer.Visible = false;
         _modalLayer.Visible = true;
         _modalLayer.Modulate = new Color(1f, 1f, 1f, 0f);
-        Callable.From(AlignConfirmLayerToModalShell).CallDeferred();
+        Callable.From(ResizeModalToContent).CallDeferred();
+        Callable.From(AlignConfirmLayerToModal).CallDeferred();
         Tween tween = CreateTween();
         tween.TweenProperty(_modalLayer, "modulate", Colors.White, 0.18)
             .SetEase(Tween.EaseType.Out)
@@ -470,7 +465,7 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
             return;
         }
 
-        AlignConfirmLayerToModalShell();
+        AlignConfirmLayerToModal();
         _confirmLayer.Visible = true;
     }
 
@@ -602,6 +597,23 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
                 0.43f,
                 transferSkipped: vanillaSlotEmpty));
         }
+    }
+
+    private void ResizeModalToContent()
+    {
+        if (!GodotObject.IsInstanceValid(_modal))
+        {
+            return;
+        }
+
+        Vector2 minimumSize = _modal.GetCombinedMinimumSize();
+        if (minimumSize.X <= 0f || minimumSize.Y <= 0f)
+        {
+            return;
+        }
+
+        _modal.Size = minimumSize;
+        AlignConfirmLayerToModal();
     }
 
     private static Control CreateColumnHeader(string text, Color color, float stretchRatio)
@@ -746,30 +758,30 @@ public sealed partial class EasyProfileTransferOverlay : CanvasLayer
     private void OnMainViewportSizeChanged()
     {
         PositionTopLeftPanel(_modal, ModalMarginLeft, ModalMarginTop);
-        AlignConfirmLayerToModalShell();
+        AlignConfirmLayerToModal();
         ResetMenuButtonLayout();
     }
 
-    private void AlignConfirmLayerToModalShell()
+    private void AlignConfirmLayerToModal()
     {
-        if (!GodotObject.IsInstanceValid(_confirmLayer) || _confirmLayer.GetParent() is not Control modalShell)
+        if (!GodotObject.IsInstanceValid(_confirmLayer) || !GodotObject.IsInstanceValid(_modal))
         {
             return;
         }
 
-        Vector2 shellSize = modalShell.Size;
-        if (shellSize.X <= 0f || shellSize.Y <= 0f)
+        Vector2 modalSize = _modal.Size;
+        if (modalSize.X <= 0f || modalSize.Y <= 0f)
         {
-            shellSize = modalShell.GetMinimumSize();
+            modalSize = _modal.GetCombinedMinimumSize();
         }
 
-        if (shellSize.X <= 0f || shellSize.Y <= 0f)
+        if (modalSize.X <= 0f || modalSize.Y <= 0f)
         {
             return;
         }
 
-        _confirmLayer.Position = Vector2.Zero;
-        _confirmLayer.Size = shellSize;
+        _confirmLayer.Position = _modal.Position;
+        _confirmLayer.Size = modalSize;
     }
 
     private static void PositionTopLeftPanel(Control panel, int left, int top)
